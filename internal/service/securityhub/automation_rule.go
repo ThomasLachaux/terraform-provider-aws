@@ -5,6 +5,7 @@ package securityhub
 
 import (
 	"context"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/securityhub"
@@ -43,11 +44,11 @@ func ResourceAutomationRule() *schema.Resource {
 			// 	Default:  true,
 			// 	Optional: true,
 			// },
-			// "rule_order": {
-			// 	Type:     schema.TypeInt,
-			// 	Default:  1,
-			// 	Optional: true,
-			// },
+			"rule_order": {
+				Type:     schema.TypeInt,
+				Default:  1,
+				Optional: true,
+			},
 			// "is_terminal": {
 			// 	Type:     schema.TypeBool,
 			// 	Optional: true,
@@ -163,7 +164,7 @@ func resourceAutomationRuleCreate(ctx context.Context, d *schema.ResourceData, m
 		},
 		Description: aws.String(d.Get("description").(string)),
 		RuleName:    aws.String(d.Get("rule_name").(string)),
-		RuleOrder:   aws.Int64(d.Get("rule_order").(int64)),
+		RuleOrder:   aws.Int64(int64(d.Get("rule_order").(int))),
 	}
 
 	resp, err := conn.CreateAutomationRuleWithContext(ctx, input)
@@ -179,7 +180,7 @@ func resourceAutomationRuleCreate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceAutomationRuleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-
+	
 	// conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
 
 	// aggregatorArn := d.Id()
@@ -236,6 +237,12 @@ func resourceAutomationRuleRead(ctx context.Context, d *schema.ResourceData, met
 func resourceAutomationRuleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	// conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
+
+	// input := securityhub.BatchGetAutomationRulesInput {
+	// 	AutomationRulesArns: []*string{d.Id()},
+	// }
+
 	return diags
 	// 	conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
 
@@ -265,19 +272,21 @@ func resourceAutomationRuleUpdate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceAutomationRuleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	// conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
+	conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
 
-	// aggregatorArn := d.Id()
+	automationRuleArn := d.Id()
 
-	// log.Printf("[DEBUG] Disabling Security Hub automation rule %s", aggregatorArn)
+	log.Printf("[DEBUG] Deleting Security Hub automation rule %s", automationRuleArn)
 
-	// _, err := conn.DeleteAutomationRuleWithContext(ctx, &securityhub.DeleteAutomationRuleInput{
-	// 	AutomationRuleArn: &aggregatorArn,
-	// })
+	_, err := conn.BatchDeleteAutomationRulesWithContext(ctx, &securityhub.BatchDeleteAutomationRulesInput{
+		AutomationRulesArns: []*string{
+			&automationRuleArn,
+		},
+	})
 
-	// if err != nil {
-	// 	return sdkdiag.AppendErrorf(diags, "disabling Security Hub automation rule %s: %s", aggregatorArn, err)
-	// }
+	if err != nil {
+		return sdkdiag.AppendErrorf(diags, "Deleting Security Hub automation rule %s: %s", automationRuleArn, err)
+	}
 
 	return diags
 }
