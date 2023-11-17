@@ -5,10 +5,13 @@ package securityhub
 
 import (
 	"context"
-	"log"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/securityhub"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-aws/internal/conns"
+	"github.com/hashicorp/terraform-provider-aws/internal/errs/sdkdiag"
 )
 
 // @SDKResource("aws_securityhub_automation_rule")
@@ -132,27 +135,44 @@ var (
 
 func resourceAutomationRuleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	// conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
-	rule_name := d.Get("rule_name").(string)
+	conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
 
-	d.SetId("id")
+	// rule_name := d.Get("rule_name").(string)
+	// d.SetId("id")
 	// d.Set("rule_name", "rule_name")
 	// d.Set("description", "description")
 
-	log.Printf("[DEBUG] Creating Security Hub automation rule %s", rule_name)
+	// log.Printf("[DEBUG] Creating Security Hub automation rule %s", rule_name)
 
-	// input := &securityhub.CreateAutomationRuleInput{
-	// 	GroupByAttribute: aws.String(d.Get("group_by_attribute").(string)),
-	// 	Name:             aws.String(name),
-	// }
+	// func (c *SecurityHub) CreateAutomationRuleWithContext(ctx aws.Context, input *CreateAutomationRuleInput, opts ...request.Option) (*CreateAutomationRuleOutput, error)
 
-	// resp, err := conn.CreateAutomationRuleWithContext(ctx, input)
+	input := &securityhub.CreateAutomationRuleInput{
+		// TODO: Handle actions and criterias
+		Actions: []*securityhub.AutomationRulesAction{
+			{
+				FindingFieldsUpdate: &securityhub.AutomationRulesFindingFieldsUpdate{
+					Criticality: aws.Int64(1),
+				},
+				Type: aws.String("FINDING_FIELDS_UPDATE"),
+			},
+		},
+		Criteria: &securityhub.AutomationRulesFindingFilters{
+			CompanyName: []*securityhub.StringFilter{
+				{Comparison: aws.String("NOT_CONTAINS"), Value: aws.String("a")},
+			},
+		},
+		Description: aws.String(d.Get("description").(string)),
+		RuleName:    aws.String(d.Get("rule_name").(string)),
+		RuleOrder:   aws.Int64(d.Get("rule_order").(int64)),
+	}
 
-	// if err != nil {
-	// 	return sdkdiag.AppendErrorf(diags, "creating automation rule for Security Hub: %s", err)
-	// }
+	resp, err := conn.CreateAutomationRuleWithContext(ctx, input)
 
-	// d.SetId(aws.StringValue(resp.RuleArn))
+	if err != nil {
+		return sdkdiag.AppendErrorf(diags, "creating automation rule for Security Hub: %s", err)
+	}
+
+	d.SetId(aws.StringValue(resp.RuleArn))
 
 	return append(diags, resourceAutomationRuleRead(ctx, d, meta)...)
 }
