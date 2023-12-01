@@ -211,39 +211,27 @@ func resourceAutomationRuleRead(ctx context.Context, d *schema.ResourceData, met
 
 func resourceAutomationRuleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
+	conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
 
-	// conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
+	input := securityhub.BatchUpdateAutomationRulesInput{
+		UpdateAutomationRulesRequestItems: []*securityhub.UpdateAutomationRulesRequestItem{
+			{
+				RuleArn: aws.String(d.Id()),
+				//TODO: Update params
+			},
+		},
+	}
 
-	// input := securityhub.BatchGetAutomationRulesInput {
-	// 	AutomationRulesArns: []*string{d.Id()},
-	// }
+	resp, err := conn.BatchUpdateAutomationRulesWithContext(ctx, &input)
 
-	return diags
-	// 	conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
+	if err != nil {
+		return sdkdiag.AppendErrorf(diags, "updating Security Hub automation rule (%s): %s", d.Id(), err)
+	}
 
-	// 	aggregatorArn := d.Id()
+	d.SetId(aws.StringValue(resp.ProcessedAutomationRules[0]))
 
-	// 	linkingMode := d.Get("linking_mode").(string)
-
-	//	req := &securityhub.UpdateAutomationRuleInput{
-	//		AutomationRuleArn: &aggregatorArn,
-	//		RegionLinkingMode:    &linkingMode,
+	return append(diags, resourceAutomationRuleRead(ctx, d, meta)...)
 }
-
-// 	if v, ok := d.GetOk("specified_regions"); ok && (linkingMode == allRegionsExceptSpecified || linkingMode == specifiedRegions) {
-// 		req.Regions = flex.ExpandStringSet(v.(*schema.Set))
-// 	}
-
-// 	resp, err := conn.UpdateAutomationRuleWithContext(ctx, req)
-
-// 	if err != nil {
-// 		return sdkdiag.AppendErrorf(diags, "updating Security Hub automation rule (%s): %s", aggregatorArn, err)
-// 	}
-
-// 	d.SetId(aws.StringValue(resp.AutomationRuleArn))
-
-// 	return append(diags, resourceAutomationRuleRead(ctx, d, meta)...)
-// }
 
 func resourceAutomationRuleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
