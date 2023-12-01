@@ -138,14 +138,7 @@ func resourceAutomationRuleCreate(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 	conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
 
-	// rule_name := d.Get("rule_name").(string)
-	// d.SetId("id")
-	// d.Set("rule_name", "rule_name")
-	// d.Set("description", "description")
-
-	// log.Printf("[DEBUG] Creating Security Hub automation rule %s", rule_name)
-
-	// func (c *SecurityHub) CreateAutomationRuleWithContext(ctx aws.Context, input *CreateAutomationRuleInput, opts ...request.Option) (*CreateAutomationRuleOutput, error)
+	log.Printf("[DEBUG] Creating Security Hub automation rule %s", d.Get("rule_name"))
 
 	input := &securityhub.CreateAutomationRuleInput{
 		// TODO: Handle actions and criterias
@@ -180,59 +173,28 @@ func resourceAutomationRuleCreate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceAutomationRuleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	
-	// conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
+	conn := meta.(*conns.AWSClient).SecurityHubConn(ctx)
 
-	// aggregatorArn := d.Id()
+	aggregatorArn := d.Id()
 
-	// log.Printf("[DEBUG] Reading Security Hub automation rule to find %s", aggregatorArn)
+	log.Printf("[DEBUG] Reading Security Hub automation rule to find %s", aggregatorArn)
 
-	// aggregator, err := AutomationRuleCheckExists(ctx, conn, aggregatorArn)
+	output, err := conn.BatchGetAutomationRulesWithContext(ctx, &securityhub.BatchGetAutomationRulesInput{
+		AutomationRulesArns: []*string{
+			&aggregatorArn,
+		},
+	})
 
-	// if err != nil {
-	// 	return sdkdiag.AppendErrorf(diags, "reading Security Hub automation rule to find %s: %s", aggregatorArn, err)
-	// }
+	if err != nil {
+		return sdkdiag.AppendErrorf(diags, "reading Security Hub automation rule to find %s: %s", aggregatorArn, err)
+	}
 
-	// if aggregator == nil {
-	// 	log.Printf("[WARN] Security Hub automation rule (%s) not found, removing from state", aggregatorArn)
-	// 	d.SetId("")
-	// 	return diags
-	// }
-
-	// d.Set("linking_mode", aggregator.RegionLinkingMode)
-
-	// if len(aggregator.Regions) > 0 {
-	// 	d.Set("specified_regions", flex.FlattenStringList(aggregator.Regions))
-	// }
+	if len(output.Rules) == 0 {
+		return sdkdiag.AppendErrorf(diags, "Security Hub automation rule %s not found. It seems that it has not been created correctly.", aggregatorArn)
+	}
 
 	return diags
 }
-
-//func AutomationRuleCheckExists(ctx context.Context, conn *securityhub.SecurityHub, automationRuleArn string) (*securityhub.GetAutomationRuleOutput, error) {
-// 	input := &securityhub.ListAutomationRulesInput{}
-
-// 	var found *securityhub.GetAutomationRuleOutput
-// 	var err error
-
-// 	err = conn.ListAutomationRulesPagesWithContext(ctx, input, func(page *securityhub.ListAutomationRulesOutput, lastPage bool) bool {
-// 		for _, aggregator := range page.AutomationRules {
-// 			if aws.StringValue(aggregator.AutomationRuleArn) == automationRuleArn {
-// 				getInput := &securityhub.GetAutomationRuleInput{
-// 					AutomationRuleArn: &automationRuleArn,
-// 				}
-// 				found, err = conn.GetAutomationRuleWithContext(ctx, getInput)
-// 				return false
-// 			}
-// 		}
-// 		return !lastPage
-// 	})
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return found, nil
-//}
 
 func resourceAutomationRuleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
