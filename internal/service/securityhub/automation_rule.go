@@ -38,21 +38,22 @@ func ResourceAutomationRule() *schema.Resource {
 				// ForceNew: true,
 			},
 			// "criteria": criteriaSetNestedBlock,
-			// "action":   actionSetNestedBlock,
-			// "rule_enabled": {
-			// 	Type:     schema.TypeBool,
-			// 	Default:  true,
-			// 	Optional: true,
-			// },
+			// "action": actionSetNestedBlock,
+			"rule_enabled": {
+				Type:     schema.TypeBool,
+				Default:  true,
+				Optional: true,
+			},
 			"rule_order": {
 				Type:     schema.TypeInt,
 				Default:  1,
 				Optional: true,
 			},
-			// "is_terminal": {
-			// 	Type:     schema.TypeBool,
-			// 	Optional: true,
-			// },
+			"is_terminal": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -77,12 +78,14 @@ var (
 				Optional: true,
 				// TODO ValidateFunc: validOperator
 			},
-			// "values": {
-			// 	Type:     schema.TypeList,
-			// 	Required: true,
-			// 	MinItems: 1, // ça marche ou pas ?
-			// 	Elem:
-			// },
+			"values": {
+				Type:     schema.TypeList,
+				Required: true,
+				MinItems: 1,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 )
@@ -117,19 +120,22 @@ var (
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			// "types": {
-			// 	Type:     schema.TypeList,
-			// 	Optional: true,
-			// },
+			"types": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"note": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			// TODO Map for user_defined_fields
-			// "user_defined_fields": {
-			// 	Type:     schema.TypeList,
-			// 	Required: true,
-			// },
+			"user_defined_fields": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	}
 )
@@ -156,8 +162,15 @@ func resourceAutomationRuleCreate(ctx context.Context, d *schema.ResourceData, m
 			},
 		},
 		Description: aws.String(d.Get("description").(string)),
+		IsTerminal:  aws.Bool(d.Get("is_terminal").(bool)),
 		RuleName:    aws.String(d.Get("rule_name").(string)),
 		RuleOrder:   aws.Int64(int64(d.Get("rule_order").(int))),
+		RuleStatus: aws.String(func() string {
+			if d.Get("rule_enabled").(bool) {
+				return "ENABLED"
+			}
+			return "DISABLED"
+		}()),
 	}
 
 	resp, err := conn.CreateAutomationRuleWithContext(ctx, input)
